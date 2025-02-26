@@ -30,3 +30,16 @@
 *.exe
 *.out
 *.app
+obj/Debug/LethalCompanyRehoster.csproj.FileListAbsolute.txt
+obj/Debug/LethalCompanyRehoster.csproj.CoreCompileInputs.cache
+obj/Debug/LethalCompanyRehoster.csproj.AssemblyReference.cache
+obj/Debug/LethalCo.DC6D818D.Up2Date
+obj/Debug/LC-ReHoster.pdb
+obj/Debug/.NETFramework,Version=v4.8.AssemblyAttributes.cs
+bin/Debug/MonoMod.Utils.xml
+bin/Debug/MonoMod.RuntimeDetour.xml
+bin/Debug/LC-ReHoster.pdb
+bin/Debug/BepInEx.xml
+bin/Debug/0Harmony.xml
+.idea/.idea.LC-RehosterOC.dir/.idea/vcs.xml
+.idea/.idea.LC-RehosterOC.dir/.idea/indexLayout.xml
