@@ -253,62 +253,94 @@ namespace HostRestartFix
         }
 
         // Patch class for Debug.Log
-        private class DebugLogPatch
+private class DebugLogPatch
+{
+    // Add a flag to track whether beta save data has been detected
+    private static bool betaSaveDataDetected = false;
+    // Add a flag to track whether host start was detected
+    private static bool hostStartDetected = false;
+    
+    static void Prefix(object message)
+    {
+        if (message == null) return;
+        
+        string msgStr = message.ToString();
+        
+        // Log ALL messages that contain "host" for debugging
+        if (msgStr.Contains("host"))
         {
-            static void Prefix(object message)
+            logger.LogInfo($"Host-related message detected: '{msgStr}'");
+        }
+        
+        // Check for beta save data message and update our flag
+        if (msgStr.Contains("Has beta save data"))
+        {
+            logger.LogInfo($"Beta save data message detected: '{msgStr}'");
+            betaSaveDataDetected = true;
+            
+            // Check if host was already detected
+            CheckBothConditions();
+        }
+        
+        // Check multiple potential host start messages
+        bool isHostStartMessage = 
+            msgStr.Contains("[Info   : Unity Log] started host!") ||
+            msgStr.Contains("started host") ||
+            (msgStr.Contains("host") && msgStr.Contains("start"));
+            
+        if (isHostStartMessage)
+        {
+            logger.LogInfo($"Host start message detected: '{msgStr}'");
+            logger.LogInfo($"Current flags - hasBeenForceQuit: {hasBeenForceQuit}, firstHostDetected: {firstHostDetected}, betaSaveDataDetected: {betaSaveDataDetected}");
+            
+            // Set the host start detected flag
+            hostStartDetected = true;
+            
+            // Check if both conditions are met
+            CheckBothConditions();
+        }
+    }
+    
+    // Helper method to check both conditions and start force quit if needed
+    private static void CheckBothConditions()
+    {
+        logger.LogInfo($"Checking both conditions - hostStartDetected: {hostStartDetected}, betaSaveDataDetected: {betaSaveDataDetected}, hasBeenForceQuit: {hasBeenForceQuit}");
+        
+        // Only proceed with force quit if both host is detected AND beta save data has been detected
+        if (!hasBeenForceQuit && hostStartDetected && betaSaveDataDetected)
+        {
+            logger.LogInfo("Both conditions met! Will force quit to menu in 10 seconds.");
+            firstHostDetected = true;
+            
+            // Check if Instance is properly set
+            if (Instance == null)
             {
-                if (message == null) return;
-        
-                string msgStr = message.ToString();
-        
-                // Log hosting-related messages for debugging
-                if (msgStr.Contains("host") && !msgStr.Contains("ghost"))
-                {
-                    logger.LogInfo($"Host-related message detected: '{msgStr}'");
-                }
-        
-                // Check for host start message
-                if (msgStr.Contains("[Info   : Unity Log] started host!"))
-                {
-                    logger.LogInfo($"Host start message detected: '{msgStr}'");
+                logger.LogError("Plugin Instance is null! Cannot start coroutine!");
+                return;
+            }
             
-                    if (!hasBeenForceQuit && !firstHostDetected)
-                    {
-                        logger.LogInfo("First host detected! Waiting for client to finish loading...");
-                        firstHostDetected = true;
-                        // We don't start the timer yet, just mark that hosting has started
-                    }
-                }
-        
-                // Check for loading completion message
-                if (msgStr.Contains("[Info   : Unity Log] Has beta save data:") && firstHostDetected && !hasBeenForceQuit)
-                {
-                    logger.LogInfo("Client has finished loading! Starting countdown timer now.");
-            
-                    if (Instance == null)
-                    {
-                        logger.LogError("Plugin Instance is null! Cannot start coroutine!");
-                        return;
-                    }
-            
-                    try
-                    {
-                        logger.LogInfo("Starting ForceQuitToMenu coroutine");
-                        Instance.StartCoroutine(ForceQuitToMenu());
-                        logger.LogInfo("Coroutine started successfully");
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogError($"Failed to start coroutine: {ex.Message}");
-                        logger.LogError(ex.StackTrace);
+            try
+            {
+                logger.LogInfo("Starting ForceQuitToMenu coroutine");
+                Instance.StartCoroutine(ForceQuitToMenu());
+                logger.LogInfo("Coroutine started successfully");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError($"Failed to start coroutine: {ex.Message}");
+                logger.LogError(ex.StackTrace);
                 
-                        // Try immediate force return if coroutine fails
-                        hasBeenForceQuit = true;
-                        ForceReturnToMainMenu();
-                    }
-                }
+                // Try immediate force return if coroutine fails
+                hasBeenForceQuit = true;
+                ForceReturnToMainMenu();
             }
         }
+        else
+        {
+            logger.LogInfo($"Not all conditions met: hostStartDetected={hostStartDetected}, betaSaveDataDetected={betaSaveDataDetected}, hasBeenForceQuit={hasBeenForceQuit}");
+        }
+    }
+}
 
         // Coroutine with proper error handling that doesn't use try/catch around yields
         private static IEnumerator ForceQuitToMenu()
